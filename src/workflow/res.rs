@@ -177,7 +177,7 @@ def _assert_invariant(
             assert_never(invariant)
 
 
-@workflow("{context}")
+@workflow("{context}", private={is_private})
 def {workflow}(
     command: {command},
     repository: {repository} = Provide[App.{context}.repository],
