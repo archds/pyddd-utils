@@ -11,6 +11,7 @@ use crate::ApplicationError;
 
 mod res;
 
+#[derive(Serialize)]
 enum WorkflowType {
     Create,
     Edit,
@@ -27,13 +28,20 @@ struct Context {
     entity_title_case: String,
     workflow: String,
     is_private: String,
+    wf_type: WorkflowType,
 }
 
 impl Context {
-    pub fn new(context: String, entity: String, workflow: String, is_private: bool) -> Self {
+    pub fn new(
+        context: String,
+        entity: String,
+        workflow: String,
+        is_private: bool,
+        wf_type: WorkflowType,
+    ) -> Self {
         Self {
-            event: format!("{}Created", entity.to_case(Case::Pascal)),
-            command: format!("Create{}", entity.to_case(Case::Pascal)),
+            event: format!("{}", entity.to_case(Case::Pascal)),
+            command: format!("{}", entity.to_case(Case::Pascal)),
             context: context.clone().to_case(Case::Snake),
             entity_snake_case: entity.to_case(Case::Snake),
             entity_title_case: entity.to_case(Case::Pascal),
@@ -43,6 +51,7 @@ impl Context {
                 false => "False".to_string(),
             },
             repository: format!("{}Repository", context.to_case(Case::Pascal)),
+            wf_type: wf_type,
         }
     }
 }
@@ -70,36 +79,47 @@ fn choose_type() -> Result<WorkflowType, ApplicationError> {
     .map_err(|_| "Invalid workflow type!")
 }
 
-fn build_context(wft: WorkflowType) -> Result<Context, ApplicationError> {
-    match wft {
-        WorkflowType::Create => {
-            let context = Context::new(
-                Text::new("Enter context name").prompt().unwrap(),
-                Text::new("Enter entity name").prompt().unwrap(),
-                Text::new("Enter workflow name").prompt().unwrap(),
-                Confirm::new("Is workflow private?")
-                    .with_default(false)
-                    .with_placeholder("No")
-                    .prompt()
-                    .unwrap(),
-            );
-
-            Ok(context)
-        }
-        WorkflowType::Edit => panic!(),
-        WorkflowType::Delete => panic!(),
-    }
-}
-
-fn write_template(context: Context) -> Result<(), ApplicationError> {
+fn build_template(context: Context) -> Result<(String, Context), ApplicationError> {
     let mut tt = TinyTemplate::new();
     tt.add_template("CreateWorkflow", res::CREATE_WORKFLOW)
         .unwrap();
+    tt.add_template("UpdateWorkflow", res::UPDATE_WORKFLOW)
+        .unwrap();
 
-    let template = tt.render("CreateWorkflow", &context).unwrap();
+    let render_result = match context.wf_type {
+        WorkflowType::Create => tt.render("CreateWorkflow", &context),
+        WorkflowType::Edit => tt.render("UpdateWorkflow", &context),
+        WorkflowType::Delete => panic!(),
+    };
+
+    render_result
+        .map(|content| (content, context))
+        .map_err(|_| "Failed to render template")
+}
+
+fn build_context(wft: WorkflowType) -> Result<Context, ApplicationError> {
+    let context = Context::new(
+        Text::new("Enter context name").prompt().unwrap(),
+        Text::new("Enter entity name").prompt().unwrap(),
+        Text::new("Enter workflow name").prompt().unwrap(),
+        Confirm::new("Is workflow private?")
+            .with_default(false)
+            .with_placeholder("No")
+            .prompt()
+            .unwrap(),
+        wft,
+    );
+
+    Ok(context)
+}
+
+fn write_template(data: (String, Context)) -> Result<(), ApplicationError> {
+    let (template, context) = data;
 
     let mut file = File::create(format!("{}.py", context.workflow)).unwrap();
     file.write_all(template.as_bytes()).unwrap();
+
+    println!("Created!");
 
     Ok(())
 }
@@ -107,5 +127,6 @@ fn write_template(context: Context) -> Result<(), ApplicationError> {
 pub fn entrypoint() -> Result<(), ApplicationError> {
     choose_type()
         .and_then(build_context)
+        .and_then(build_template)
         .and_then(write_template)
 }

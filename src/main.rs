@@ -23,7 +23,8 @@ fn main() {
 
     let result = Select::new("Choose command", options)
         .prompt()
-        .map(|cmd| match cmd {
+        .map_err(|_| "Invalid selection")
+        .and_then(|cmd| match cmd {
             Action::NewWorkflow => workflow::entrypoint(),
         });
 
