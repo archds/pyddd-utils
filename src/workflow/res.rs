@@ -93,7 +93,7 @@ pub const UPDATE_WORKFLOW: &'static str = r#"
 
 from typing import Literal, assert_never
 
-from core.admin.application.repository import AdminRepository
+from core.{context}.application.repository import {repository}
 from core.shared.errors.domain import (
     DomainRuleFailure,
     DomainRuleSuccess,
@@ -137,7 +137,7 @@ def _transit_state(
 @inject
 def _revert_state(
     event: {event},
-    repository: AdminRepository = Provide[App.admin.repository],
+    repository: {repository} = Provide[App.{context}.repository],
 ) -> None:
     repository.update_{entity_snake_case}(event.data["old"])
 
