@@ -40,8 +40,16 @@ impl Context {
         wf_type: WorkflowType,
     ) -> Self {
         Self {
-            event: format!("{}", entity.to_case(Case::Pascal)),
-            command: format!("{}", entity.to_case(Case::Pascal)),
+            event: match wf_type {
+                WorkflowType::Create => format!("{}Created", entity.to_case(Case::Pascal)),
+                WorkflowType::Edit => format!("{}Updated", entity.to_case(Case::Pascal)),
+                WorkflowType::Delete => format!("{}Deleted", entity.to_case(Case::Pascal)),
+            },
+            command: match wf_type {
+                WorkflowType::Create => format!("Create{}", entity.to_case(Case::Pascal)),
+                WorkflowType::Edit => format!("Update{}", entity.to_case(Case::Pascal)),
+                WorkflowType::Delete => format!("Delete{}", entity.to_case(Case::Pascal)),
+            },
             context: context.clone().to_case(Case::Snake),
             entity_snake_case: entity.to_case(Case::Snake),
             entity_title_case: entity.to_case(Case::Pascal),
