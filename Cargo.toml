@@ -8,5 +8,6 @@ edition = "2021"
 [dependencies]
 convert_case = "0.6.0"
 inquire = "0.5.3"
+regex = "1.7.1"
 serde = { version = "1.0.152", features = ["derive"] }
 tinytemplate = "1.2.1"
